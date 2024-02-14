@@ -43,7 +43,7 @@ def main():
     with open(second_filename, 'wb') as second_file:
         for byte in first:
             keystream_byte = (a * Xn + c) % m
-            # xor byte of first file with keystream byte to get ciphertext byte
+            # xor byte of first file with keystream byte to get second file byte
             second_file_byte = byte ^ keystream_byte
             second_file.write(bytes([second_file_byte]))
             # update Xn
