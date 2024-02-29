@@ -1,0 +1,119 @@
+#!/usr/bin/python3
+import sys
+
+# important info on running the program:
+    # ./ctencrypt [-b blocksize] -k key [plaintextfile]
+    # Bracketed content is optional
+
+def get_sort_order(key):
+    key_bits = list(enumerate(key))
+    sorted_chars = sorted(key_bits, key=lambda x: (x[1], x[0]))
+    column_sequence = {char[0]: index for index, char in enumerate(sorted_chars)}
+    return [column_sequence[char[0]] for char in key_bits]
+
+def main():
+    # default values:
+    block_size = 16
+    plaintext = ""
+
+    # key & table
+    key_index = sys.argv.index("-k")
+    key = sys.argv[key_index + 1]
+    num_columns = len(key)
+
+    if "-b" in sys.argv:
+        block_index = sys.argv.index("-b")
+        block_size = int(sys.argv[block_index + 1])
+
+    # read in plaintext, can be arbitrary binary data
+    flag = False
+    if len(sys.argv) > 5:
+        flag = True
+    else:
+        plaintext = input("Enter plaintext: ")
+
+    plaintext_array = []
+    if flag:
+        with open(sys.argv[5], "rb") as file:
+            plaintext_array = list(file.read())
+    else:
+        plaintext_array = [ord(char) for char in plaintext]
+    # print(plaintext_array)
+
+    num_rows = int(block_size/num_columns)
+    if (block_size%num_columns!=0): # if block size is NOT a multiple of key size
+        num_rows+=1
+        # You must be prepared to handle non-padded 
+        # incomplete tables in every block.
+    
+    if block_size<1:
+        print("Block size cannot be less than 1.")
+        return
+
+    # create all the matrices required to hold the content
+    # one matrix can hold rows*cols amount of letters/bits of data
+    num_matrices = int(len(plaintext_array)/block_size)
+    if (len(plaintext_array)%block_size != 0):
+        num_matrices+=1
+
+    matrices = []
+    a = 0
+    for h in range(num_matrices): # reads in all content at once, into as many matrices/tables as required
+        matrix = [[None for _ in range(num_columns)] for _ in range(num_rows)]
+        b = 0
+        for i in range(num_rows):
+            for j in range(num_columns):
+                if (j >= len(plaintext_array)): # if content is less than block
+                    matrix[i][j] = None
+                elif (a == len(plaintext_array)): # stops when content is run out
+                    break
+                elif (b >= block_size):
+                    break
+                else:
+                    matrix[i][j] = plaintext_array[a]
+                    a+=1
+                    b+=1
+                # print(matrix[i][j])
+        matrices.append(matrix)
+    # print(matrices)
+    
+    matrices = []
+    a = 0
+    for h in range(num_matrices): # reads in all content at once, into as many matrices/tables as required
+        matrix = [[None for _ in range(num_columns)] for _ in range(num_rows)]
+        b = 0
+        for i in range(num_rows):
+            for j in range(num_columns):
+                if (j >= len(plaintext_array)): # if content is less than block
+                    matrix[i][j] = None
+                elif (a == len(plaintext_array)): # stops when content is run out
+                    break
+                elif (b >= block_size):
+                    break
+                else:
+                    matrix[i][j] = plaintext_array[a]
+                    a+=1
+                    b+=1
+    # print(matrix[i][j])
+        matrices.append(matrix)
+
+    # read in the ciphertext using order variable
+    # if key length is longer than content or block size - ignore the extra characters
+    order = get_sort_order(key)
+    # print(sort_order)
+
+    ciphertext = ""
+
+    for matrix in matrices:
+        for i in range(num_columns):
+            for j in range(num_rows):
+                if matrix[j][order.index(i)]==None:
+                    continue
+                elif isinstance(matrix[j][order.index(i)], int):
+                    ciphertext+=chr(matrix[j][order.index(i)])
+                else:
+                    ciphertext+=str(matrix[j][order.index(i)])
+    
+    print(ciphertext)
+
+main()

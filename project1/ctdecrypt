@@ -1,0 +1,98 @@
+#!/usr/bin/python3
+import sys
+
+# important info on running the program:
+    # ./ctdecrypt [-b blocksize] -k key [ciphertextfile]
+    # Bracketed content is optional
+
+def get_sort_order(key):
+    key_bits = list(enumerate(key))
+    sorted_chars = sorted(key_bits, key=lambda x: (x[1], x[0]))
+    column_sequence = {char[0]: index for index, char in enumerate(sorted_chars)}
+    return [column_sequence[char[0]] for char in key_bits]
+
+def main():
+    # default values:
+    block_size = 16
+    plaintext = ""
+
+    # key:
+    key_index = sys.argv.index("-k")
+    key = sys.argv[key_index + 1]
+    num_columns = len(key)
+
+    if "-b" in sys.argv:
+        block_index = sys.argv.index("-b")
+        block_size = int(sys.argv[block_index + 1])
+
+    flag = False
+    if len(sys.argv) > 5:
+        flag = True
+    else:
+        ciphertext = input("Enter ciphertext: ")
+
+    num_rows = int(block_size/num_columns)
+    if (block_size%num_columns!=0): # if block size is NOT a multiple of key size
+        num_rows+=1
+    
+    if block_size<1:
+        print("Block size cannot be less than 1.")
+        return
+    
+    ciphertext_array = []
+    if (flag):
+        with open(sys.argv[5], "rb") as file:
+            ciphertext_array = list(file.read())
+    else:
+        ciphertext_array = [ord(char) for char in ciphertext]
+
+    num_matrices = int(len(ciphertext_array)/block_size)
+    # if (len(ciphertext_array)%block_size != 0):
+    #     num_matrices+=1
+
+    # you know the blocksize, so if you know the length of the content
+    # you'll know if there are any "Nones" at the end of each matrix by subtraction
+    num_nones = block_size//num_columns
+
+    order = get_sort_order(key)
+
+    full_cols = num_columns - num_nones
+    # get columns with none as the last in the list
+    # for example, if there are two 'None's, (this is a pad free cipher)
+    # then the last two columns (after unscrambling) should have None in the last row 
+
+    # initialize all columns with none
+    # fill the matrices with the ciphertext, using the order of the key 
+    matrices = []
+    a = 0
+    for h in range(num_matrices):
+        matrix = [[None for _ in range(num_columns)] for _ in range(num_rows)]
+        b = 0
+        for i in order: 
+            for j in range(num_rows):
+                if (i>=full_cols and j>=num_rows-1):
+                    continue
+                elif (a >= len(ciphertext_array)):
+                    break
+                elif (b >= block_size):
+                    break
+                else:
+                    matrix[j][i] = ciphertext_array[a]
+                    # print([(order.index(i), j)])
+                    a += 1
+                    b += 1
+        matrices.append(matrix)
+
+    plaintext = ""
+    for matrix in matrices:
+        for row in matrix:
+            for data in row:
+                if data is not None:
+                    if isinstance(data, int):
+                        plaintext+=chr(data)
+                    else:
+                        plaintext+=str(data)
+
+    print(plaintext)
+
+main()
