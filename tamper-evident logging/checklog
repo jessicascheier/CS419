@@ -1,0 +1,70 @@
+#!/usr/bin/python3
+
+# running the program:
+    # checklog
+# scans the log file to validate its integrity
+
+import sys
+import os
+import hashlib
+import base64
+
+def compute_hash(line):
+    line_copy = line.strip()
+    line_bytes = line_copy.encode('utf-8')
+    line_hash = hashlib.sha256(line_bytes).digest()
+    base64_hash = base64.b64encode(line_hash)
+    return base64_hash
+
+def main():
+    if len(sys.argv)!=1:
+        print("This program accepts only one usage. \"./checklog\"\nExiting program...")
+        sys.exit(1)
+
+    if not os.path.exists('log.txt'):
+        print("failed: log.txt is missing.")
+        sys.exit(1)
+    if not os.path.exists('loghead.txt'):
+        print("failed: loghead.txt is missing.")
+        sys.exit(1)
+
+    with open('log.txt', 'r') as log_list_file:
+        with open('loghead.txt', 'r') as loghead_file:
+
+            count=0
+            prev_hash=None
+            line = log_list_file.readline().strip()
+
+            # 6. if you didn't reach EOF, go to step 2 and continue until there are no more lines to read.
+            while line != "":
+                count+=1
+                # 1. read a line L. check that the hash value on the first line is the string begin.
+                if count==1:
+                    if not line.split()[3]=='begin':
+                        print('failed: hash value on first line is not \'begin\'')
+                        sys.exit(1)
+                # 2. compute the base-64 encoded SHA-256 hash of L. H=b64encode(sha256(L))
+                prev_hash = compute_hash(line).decode('utf-8')
+                # 3. read the next line and parse out the hash.
+                next_line = log_list_file.readline().strip()
+                # if the line cannot be read bc you reached EOF, read hash stored in loghead.txt
+                if next_line == "":
+                    break
+                parsed_hash = next_line.split()[3]
+                # 4. compare hash extracted in step 3 with H.
+                if prev_hash!=parsed_hash:
+                    # 5. if they do not match, report the line number of the corruption (the previous line) and exit the program.
+                    print(f"failed: corruption at line number {count}")
+                    sys.exit(1)
+                line = next_line
+            
+            # read hash stored in loghead.txt
+            loghead_hash = loghead_file.readline().strip()
+            if prev_hash!=loghead_hash:
+                print(f"failed: corruption at line number {count}")
+                sys.exit(1)
+            else:
+                print('valid')
+                sys.exit(0)
+
+main()

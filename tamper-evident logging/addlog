@@ -1,0 +1,55 @@
+#!/usr/bin/python3
+
+import sys
+import os
+from datetime import datetime
+import hashlib
+import base64
+
+# running the program: 
+    # addlog log_string
+# this program adds a timestamped log entry to the log file containing a user-supplied string.
+
+def check_newlines(s):
+    return s.replace("\n", " ")
+
+def initialize_loghead(loghead_file):
+    loghead_file.write('begin')
+
+def create_entry(loghead_file, log_text):
+    previous_hash = loghead_file.readline()
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    log_string = f"{timestamp} - {previous_hash} {log_text}\n"
+    return log_string
+
+def create_hash(log_string):
+    log_copy = log_string.strip()
+    log_string_bytes = log_copy.encode('utf-8')
+    log_hash = hashlib.sha256(log_string_bytes).digest()
+    base64_hash = base64.b64encode(log_hash)
+    return base64_hash
+
+def main():
+    if len(sys.argv)!=2:
+        print("This program accepts only one string argument. For example: addlog user_provided_log_string.\nExiting program...")
+        sys.exit(1)
+    
+    s = sys.argv[1]
+    log_text = check_newlines(s)
+
+    if not os.path.exists('log.txt'):
+        with open('log.txt', 'a'):
+            pass
+    if not os.path.exists('loghead.txt'):
+        with open('loghead.txt', 'w') as loghead_file:
+            initialize_loghead(loghead_file)
+
+    with open('log.txt', 'a') as log_list_file:
+        with open('loghead.txt', 'r+') as loghead_file:
+            log_string = create_entry(loghead_file, log_text)
+            log_list_file.write(log_string)
+            base64_hash = create_hash(log_string)
+            loghead_file.seek(0)
+            loghead_file.write(base64_hash.decode('utf-8'))
+
+main()
